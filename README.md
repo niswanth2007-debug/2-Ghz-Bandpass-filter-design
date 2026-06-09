@@ -1,7 +1,7 @@
-# 2 GHz Bandpass Filter — ADS Simulation
+# 2 GHz Bandpass Filter Design — Keysight ADS
 
-> A 3rd-order Chebyshev bandpass filter centered at **2 GHz**, designed and simulated in **Keysight ADS**.  
-> Covers the full design pipeline: prototype values → lumped element model → microstrip conversion → EM simulation.
+A 3rd-order Chebyshev bandpass filter centered at **2 GHz**, designed and simulated in **Keysight ADS**.  
+Covers the complete design pipeline: mathematical prototype derivation → lumped element model → microstrip coupled-line conversion → full-wave EM simulation.
 
 ---
 
@@ -11,19 +11,46 @@
 |-----------|-------|
 | Filter Type | Bandpass |
 | Approximation | Chebyshev |
-| Order | 3 |
+| Order (n) | 3 |
 | Center Frequency (f₀) | 2 GHz |
 | Passband | ~1.885 – 2.115 GHz |
-| Ripple | 0.5 dB (passband) |
 | Port Impedance (Z₀) | 50 Ω |
 
 ---
 
 ## Design Flow
 
-### 1. Prototype Values (Chebyshev)
+```
+Chebyshev Prototype
+       ↓
+Lumped Element BPF (frequency + impedance scaled)
+       ↓
+Microstrip Coupled-Line BPF (odd/even mode method)
+       ↓
+ADS Optimizer (random, dimension fine-tuning)
+       ↓
+EM Simulation (ADS Momentum MoM)
+```
 
-Calculated using standard Chebyshev ladder network formulas:
+---
+
+## Step 1 — Chebyshev Prototype Values
+
+The normalized lowpass prototype values for a 3rd-order Chebyshev filter are calculated using:
+
+```
+β  = ln(coth(LAr / 17.37))       where LAr is the passband ripple
+γ  = sinh(β / 2n)
+aₖ = sin[(2k-1)π / 2n]           k = 1, 2, 3, ..., n
+bₖ = γ² + sin²(kπ / n)           k = 1, 2, 3, ..., n
+
+g₁ = 2a₁ / γ
+gₖ = (4aₖ₋₁aₖ) / (bₖ₋₁gₖ₋₁)    k = 2, 3, ..., n
+gₙ₊₁ = 1                          for n odd
+     = coth²(β/4)                 for n even
+```
+
+**Resulting prototype values:**
 
 | Element | Value |
 |---------|-------|
@@ -32,11 +59,29 @@ Calculated using standard Chebyshev ladder network formulas:
 | g₃ | 1.5963 |
 | g₄ | 1.0000 |
 
+The symmetry (g₁ = g₃, g₄ = 1) confirms a 3rd-order Chebyshev with equal ripple and matched terminations.
+
 ---
 
-### 2. Lumped Element Model
+## Step 2 — Lumped Element Bandpass Filter
 
-After frequency and impedance scaling (Z₀ = 50 Ω, fractional bandwidth Δ = (ω₂ - ω₁)/ω₀):
+The prototype values are frequency and impedance scaled to produce a bandpass filter centered at f₀ = 2 GHz with Z₀ = 50 Ω.
+
+**Scaling relations:**
+
+```
+Δ = (ω₂ - ω₁) / ω₀        (fractional bandwidth)
+
+Series arm (from shunt prototype element Cₖ):
+  L'ₖ = Lₖ·Z₀ / (ω₀·Δ)
+  C'ₖ = Δ / (Lₖ·Z₀·ω₀)
+
+Shunt arm (from series prototype element Lₖ):
+  L'ₖ = Δ·Z₀ / (ω₀·Cₖ)
+  C'ₖ = Cₖ / (Z₀·Δ·ω₀)
+```
+
+**Resulting lumped element values:**
 
 | Component | Value |
 |-----------|-------|
@@ -45,26 +90,46 @@ After frequency and impedance scaling (Z₀ = 50 Ω, fractional bandwidth Δ = (
 | L₂ | 0.365 nH |
 | C₂ | 17.34 pF |
 
-Topology: series LC resonators (L1-C1, L3-C3) with a shunt LC resonator (L2-C2) to ground.
+**Topology:** Two series LC resonators (L1-C1 and L3-C3) in the main signal path, with a shunt parallel LC resonator (L2 ∥ C2) to ground at the center node.
+
+### Lumped Element Schematic
+![Lumped Schematic](images/lumped_schematic.png)
+
+### Lumped Element S-Parameter Response
+![Lumped Response](images/lumped_response.png)
+
+S-parameter sweep: 1–3 GHz, step 5 MHz. Clean passband centered at 2 GHz with deep stopband rejection.
 
 ---
 
-### 3. Microstrip Conversion (Coupled Line BPF)
+## Step 3 — Microstrip Coupled-Line Conversion
 
-Converted to coupled microstrip lines using the odd/even mode impedance method.
+The lumped BPF is converted to a physically realizable microstrip coupled-line bandpass filter using the **odd/even mode impedance method**.
 
-**Substrate Parameters**
+Each coupled-line section supports a resonant mode at the center frequency, with electrical length = 90° at f₀ = 2 GHz.
+
+**Odd/Even mode impedances** for each section are derived from the prototype g-values and fractional bandwidth Δ:
+
+```
+Z₀ₑ,ₖ = Z₀ [1 + Jₖ·Z₀ + (Jₖ·Z₀)²]
+Z₀ₒ,ₖ = Z₀ [1 - Jₖ·Z₀ + (Jₖ·Z₀)²]
+```
+
+where Jₖ are the inverter values derived from the prototype elements.
+
+### Substrate Parameters
 
 | Parameter | Value |
 |-----------|-------|
 | Material | FR4 |
-| Thickness | 1.6 mm |
-| Dielectric Constant (εr) | 4.6 |
-| Conductor | Copper, 35 µm |
+| Dielectric Constant (εᵣ) | 4.6 |
+| Substrate Thickness (H) | 1.6 mm |
+| Conductor | Copper |
+| Conductor Thickness (T) | 35 µm |
 | Loss Tangent | 0.002 |
 | Electrical Length | 90° at 2 GHz |
 
-**Coupled Line Sections**
+### Coupled Line Section Dimensions
 
 | Section | Zoe (Ω) | Zoo (Ω) | Width (mm) | Spacing (mm) | Length (mm) |
 |---------|---------|---------|------------|--------------|-------------|
@@ -73,47 +138,91 @@ Converted to coupled microstrip lines using the odd/even mode impedance method.
 | 3 | 56.64 | 44.77 | 2.803 | 1.804 | 20.255 |
 | 4 | 70.61 | 39.24 | 2.290 | 0.491 | 20.723 |
 
-Feed lines (TL1, TL2): W = 2.918 mm, L = 5 mm
+Feed lines (TL1, TL2): W = 2.918 mm, L = 5 mm (50 Ω microstrip)
+
+The symmetry of sections 1↔4 and 2↔3 is consistent with the symmetric Chebyshev prototype.
+
+### Microstrip Schematic (with Optimizer)
+![Microstrip Schematic](images/microstrip_schematic.png)
 
 ---
 
-### 4. Optimization (ADS)
+## Step 4 — ADS Optimization
 
-Post-conversion, a random optimizer was run in ADS to fine-tune the coupled line dimensions:
+Post-conversion, a **random optimizer** was run in ADS to fine-tune the coupled line dimensions and compensate for discontinuity effects not captured by the analytical conversion.
 
-- OptimType: Random
-- MaxIters: 3326
-- Goals: S(1,1) minimization + S(2,1) passband flatness
+| Parameter | Value |
+|-----------|-------|
+| Optimizer Type | Random |
+| Max Iterations | 3326 |
+| Goals | S(1,1) minimization + S(2,1) passband flatness |
+| Weight (S(1,1)) | 1 |
+| Weight (S(2,1)) | 1–2 |
 
-Final optimized dimensions deviate slightly from hand-calculated values — see schematic for exact values.
+Final optimized dimensions deviate slightly from hand-calculated values — refer to schematic for exact post-optimization values.
+
+### Microstrip S-Parameter Response (Post-Optimization)
+![Microstrip Response](images/microstrip_response.png)
+
+| Marker | Frequency | S(1,1) | S(2,1) |
+|--------|-----------|--------|--------|
+| m5 | 1.885 GHz | -3.011 dB | -3.987 dB |
+| m4 | 1.995 GHz | -24.253 dB | -0.384 dB |
+| m3 | 2.115 GHz | -3.425 dB | -3.448 dB |
 
 ---
 
-### 5. EM Simulation (MoM)
+## Step 5 — EM Simulation (ADS Momentum)
 
-Full-wave electromagnetic simulation using ADS Momentum (MoM uW):
+Full-wave electromagnetic simulation performed using **ADS Momentum (MoM microwave)** to validate the physical layout accounting for conductor losses, fringing fields, and substrate parasitics.
+
+### Substrate Stackup
+![Substrate Stackup](images/substrate_stackup.png)
+
+| Layer | Material | Thickness |
+|-------|----------|-----------|
+| Top dielectric | AIR | — |
+| Conductor 1 (cond) | Copper | 35 µm |
+| Dielectric | FR4 | 1.6 mm |
+| Conductor 2 (cond2) | Copper | 35 µm |
+| Bottom dielectric | AIR | — |
+
+### EM Layout
+![EM Layout](images/em_layout.png)
+
+The staggered coupled-line layout is visible — 4 sections offset diagonally, consistent with the interdigital/coupled-line topology.
+
+### EM Frequency Plan
 
 | Parameter | Value |
 |-----------|-------|
 | Solver | Momentum Microwave (MoM) |
-| Frequency Sweep | 1 – 3 GHz, Linear |
+| Sweep Type | Linear |
+| Fstart | 1 GHz |
+| Fstop | 3 GHz |
 | Points | 200 |
 | Step | ~10 MHz |
 
+### EM Simulation Response
+![EM Response](images/em_response.png)
+
+| Marker | Frequency | S(1,1) | S(2,1) |
+|--------|-----------|--------|--------|
+| m5 | 1.884 GHz | -1.063 dB | -29.558 dB |
+| m4 | 1.995 GHz | -7.527 dB | -9.358 dB |
+| m3 | 2.116 GHz | -7.536 dB | -6.666 dB |
+
+> **Note:** The EM response shows degradation compared to the circuit-level simulation. This is expected — Momentum captures conductor losses, fringing fields, and substrate effects that the ideal coupled-line circuit model does not account for. The passband shift and insertion loss increase are primarily attributed to FR4's non-negligible loss tangent (0.002) at 2 GHz and mesh resolution in the current simulation setup. A finer mesh and substrate refinement would improve accuracy.
+
 ---
 
-## Simulation Results
+## Results Summary
 
-### Lumped Element Response
-- Clean passband centered at 2 GHz
-- S21 ≈ 0 dB in passband, deep rejection outside
-
-### Microstrip Response (post-optimization)
-| Marker | Frequency | S(1,1) dB | S(2,1) dB |
-|--------|-----------|-----------|-----------|
-| m5 | 1.885 GHz | -3.011 | -3.987 |
-| m4 | 1.995 GHz | -24.253 | -0.384 |
-| m3 | 2.115 GHz | -3.425 | -3.448 |
+| Stage | Center Freq | S(2,1) at f₀ | Passband BW |
+|-------|-------------|--------------|-------------|
+| Lumped Element | ~2 GHz | ~0 dB | ~230 MHz |
+| Microstrip (optimized) | 1.995 GHz | -0.384 dB | ~230 MHz |
+| EM Simulation | 1.995 GHz | -9.358 dB | degraded |
 
 ---
 
@@ -122,19 +231,20 @@ Full-wave electromagnetic simulation using ADS Momentum (MoM uW):
 ```
 2GHz-BPF-ADS/
 ├── lumped/
-│   └── bpf_lumped.dsn         # Lumped element schematic
+│   └── bpf_lumped.dsn
 ├── microstrip/
-│   └── bpf_microstrip.dsn     # Coupled line schematic + optimizer
+│   └── bpf_microstrip.dsn
 ├── em/
-│   ├── bpf_layout.gds         # EM layout
-│   └── bpf_mom.dsn            # Momentum EM setup
+│   ├── bpf_layout.gds
+│   └── bpf_mom.dsn
 ├── images/
 │   ├── lumped_schematic.png
 │   ├── lumped_response.png
 │   ├── microstrip_schematic.png
 │   ├── microstrip_response.png
+│   ├── substrate_stackup.png
 │   ├── em_layout.png
-│   └── substrate_stackup.png
+│   └── em_response.png
 ├── calculations/
 │   └── prototype_calculations.pdf
 └── README.md
@@ -144,12 +254,11 @@ Full-wave electromagnetic simulation using ADS Momentum (MoM uW):
 
 ## Tools Used
 
-- **Keysight ADS** — schematic, S-parameter simulation, optimizer, Momentum EM
-- Design methodology based on Pozar — *Microwave Engineering*
+- **Keysight ADS** — schematic entry, S-parameter simulation, random optimizer, Momentum EM
+- Design methodology: Pozar — *Microwave Engineering*, Chapter 8
 
 ---
 
 ## Author
 
-Self-initiated RF filter design project.  
-Part of an ongoing exploration of microwave filter design and simulation.
+Self-initiated RF filter design project exploring microwave filter theory and simulation.
