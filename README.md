@@ -93,10 +93,10 @@ Shunt arm (from series prototype element Lₖ):
 **Topology:** Two series LC resonators (L1-C1 and L3-C3) in the main signal path, with a shunt parallel LC resonator (L2 ∥ C2) to ground at the center node.
 
 ### Lumped Element Schematic
-![Lumped Schematic](images/lumped_schematic.png)
+![Lumped Schematic](images/lumped_sch.png)
 
 ### Lumped Element S-Parameter Response
-![Lumped Response](images/lumped_response.png)
+![Lumped Response](images/lumped_sparameters.png)
 
 S-parameter sweep: 1–3 GHz, step 5 MHz. Clean passband centered at 2 GHz with deep stopband rejection.
 
@@ -142,8 +142,11 @@ Feed lines (TL1, TL2): W = 2.918 mm, L = 5 mm (50 Ω microstrip)
 
 The symmetry of sections 1↔4 and 2↔3 is consistent with the symmetric Chebyshev prototype.
 
+### Substrate Stackup
+![Substrate Stackup](images/substrate.png)
+
 ### Microstrip Schematic (with Optimizer)
-![Microstrip Schematic](images/microstrip_schematic.png)
+![Microstrip Schematic](images/mspc_sch.png)
 
 ---
 
@@ -162,7 +165,7 @@ Post-conversion, a **random optimizer** was run in ADS to fine-tune the coupled 
 Final optimized dimensions deviate slightly from hand-calculated values — refer to schematic for exact post-optimization values.
 
 ### Microstrip S-Parameter Response (Post-Optimization)
-![Microstrip Response](images/microstrip_response.png)
+![Microstrip Response](images/mspc_sch_sparameters.png)
 
 | Marker | Frequency | S(1,1) | S(2,1) |
 |--------|-----------|--------|--------|
@@ -176,19 +179,11 @@ Final optimized dimensions deviate slightly from hand-calculated values — refe
 
 Full-wave electromagnetic simulation performed using **ADS Momentum (MoM microwave)** to validate the physical layout accounting for conductor losses, fringing fields, and substrate parasitics.
 
-### Substrate Stackup
-![Substrate Stackup](images/substrate_stackup.png)
-
-| Layer | Material | Thickness |
-|-------|----------|-----------|
-| Top dielectric | AIR | — |
-| Conductor 1 (cond) | Copper | 35 µm |
-| Dielectric | FR4 | 1.6 mm |
-| Conductor 2 (cond2) | Copper | 35 µm |
-| Bottom dielectric | AIR | — |
+### EM Simulation Setup
+![EM Setup](images/em_setup.png)
 
 ### EM Layout
-![EM Layout](images/em_layout.png)
+![EM Layout](images/layout.png)
 
 The staggered coupled-line layout is visible — 4 sections offset diagonally, consistent with the interdigital/coupled-line topology.
 
@@ -204,7 +199,7 @@ The staggered coupled-line layout is visible — 4 sections offset diagonally, c
 | Step | ~10 MHz |
 
 ### EM Simulation Response
-![EM Response](images/em_response.png)
+![EM Response](images/layout_em_sim.png)
 
 | Marker | Frequency | S(1,1) | S(2,1) |
 |--------|-----------|--------|--------|
@@ -230,24 +225,19 @@ The staggered coupled-line layout is visible — 4 sections offset diagonally, c
 
 ```
 2GHz-BPF-ADS/
-├── lumped/
-│   └── bpf_lumped.dsn
-├── microstrip/
-│   └── bpf_microstrip.dsn
-├── em/
-│   ├── bpf_layout.gds
-│   └── bpf_mom.dsn
 ├── images/
-│   ├── lumped_schematic.png
-│   ├── lumped_response.png
-│   ├── microstrip_schematic.png
-│   ├── microstrip_response.png
-│   ├── substrate_stackup.png
-│   ├── em_layout.png
-│   └── em_response.png
+│   ├── lumped_sch.png
+│   ├── lumped_sparameters.png
+│   ├── mspc_sch.png
+│   ├── mspc_sch_sparameters.png
+│   ├── substrate.png
+│   ├── em_setup.png
+│   ├── layout.png
+│   └── layout_em_sim.png
 ├── calculations/
 │   └── prototype_calculations.pdf
 └── README.md
+bpf calculations
 ```
 
 ---
